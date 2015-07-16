@@ -121,7 +121,7 @@ MediaPlayer.dependencies.BufferController = function () {
             switchInitData.call(self);
         },
 
-		onMediaLoaded = function (e) {
+        onMediaLoaded = function (e) {
             if (e.data.fragmentModel !== this.streamProcessor.getFragmentModel()) return;
 
             var events,
@@ -176,7 +176,8 @@ MediaPlayer.dependencies.BufferController = function () {
             }
 
             var self = this,
-                ranges;
+                ranges,
+                current;
 
             if (e.error) {
                 // if the append has failed because the buffer is full we should store the data
@@ -211,6 +212,26 @@ MediaPlayer.dependencies.BufferController = function () {
                     //self.log("Number of buffered ranges: " + ranges.length);
                     for (i = 0, len = ranges.length; i < len; i += 1) {
                         self.log("Buffered Range: " + ranges.start(i) + " - " + ranges.end(i));
+                    }
+                }
+            }
+
+            current = self.sourceBufferExt.getBufferRange(
+                    buffer,
+                    self.playbackController.getTime());
+            if (current !== null) {
+                var fragmentDuration = this.streamProcessor.getCurrentTrack()
+                                        .fragmentDuration,
+                    j,
+                    ln = ranges.length;
+                for (j = 0; j < ln; j += 1) {
+                    if (current.start > ranges.end(j) + fragmentDuration ||
+                            current.end + fragmentDuration < ranges.start(j)) {
+                        clearBuffer.call(self, {
+                            buffer: buffer,
+                            from: ranges.start(j),
+                            to: ranges.end(j)
+                        });
                     }
                 }
             }
@@ -338,15 +359,24 @@ MediaPlayer.dependencies.BufferController = function () {
             return (totalBufferedTime < criticalBufferLevel);
         },
 
-        clearBuffer = function() {
+        clearBuffer = function(target) {
             var self = this,
+                fragmentModel = self.streamProcessor.getFragmentModel(),
                 currentTime,
                 removeStart,
                 removeEnd,
                 range,
                 req;
 
-            if (!buffer) return;
+            if (target) {
+                self.log("Clearing specified range: " +
+                        target.from + "-" + target.to);
+                self.sourceBufferExt.remove(
+                        target.buffer || buffer, target.from, target.to, mediaSource);
+                return;
+            }
+
+            if (!buffer || buffer.buffered.length <= 0) return;
 
             currentTime = self.playbackController.getTime();
             // we need to remove data that is more than one fragment before the video currentTime
@@ -361,6 +391,7 @@ MediaPlayer.dependencies.BufferController = function () {
 
             removeStart = buffer.buffered.start(0);
             self.sourceBufferExt.remove(buffer, removeStart, removeEnd, mediaSource);
+            fragmentModel.removeExecutedRequestsBeforeTime(removeEnd);
         },
 
         onRemoved = function(e) {
@@ -641,6 +672,8 @@ MediaPlayer.dependencies.BufferController = function () {
          * @memberof BufferController#
          */
         createBuffer: createBuffer,
+
+        clearBuffer: clearBuffer,
 
         getStreamProcessor: function() {
             return this.streamProcessor;

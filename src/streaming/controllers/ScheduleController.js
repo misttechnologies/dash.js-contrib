@@ -246,7 +246,7 @@ MediaPlayer.dependencies.ScheduleController = function () {
         onBufferCleared = function(e) {
             // after the data has been removed from the buffer we should remove the requests from the list of
             // the executed requests for which playback time is inside the time interval that has been removed from the buffer
-            fragmentModel.removeExecutedRequestsBeforeTime(e.data.to);
+            //fragmentModel.removeExecutedRequestsBeforeTime(e.data.to);
 
             if (e.data.hasEnoughSpaceToAppend) {
                 doStart.call(this);
@@ -319,7 +319,11 @@ MediaPlayer.dependencies.ScheduleController = function () {
 
         onPlaybackSeeking = function(e) {
             if (!initialPlayback) {
+                // clear all buffers + executedRequests when user is seeking
+                // to avoid playback stuck when video element has discarded buffers silently
                 fragmentModel.cancelPendingRequests();
+                this.bufferController.virtualBuffer.reset();
+                this.bufferController.clearBuffer();
             }
 
             var metrics = this.metricsModel.getMetricsFor("stream"),

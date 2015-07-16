@@ -144,7 +144,7 @@ MediaPlayer.rules.SameTimeRequestRule = function () {
 
             currentTime = this.playbackController.getTime();
             reqForCurrentTime = getForTime(fragmentModels, currentTime);
-            req = reqForCurrentTime || findClosestToTime(fragmentModels, currentTime) || current;
+            req = reqForCurrentTime || findClosestToTime(fragmentModels, currentTime) || current || req;
 
             if (!req) {
                 callback(new MediaPlayer.rules.SwitchRequest([], p));

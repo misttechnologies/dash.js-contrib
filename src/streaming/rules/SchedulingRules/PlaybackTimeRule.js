@@ -85,6 +85,7 @@ MediaPlayer.rules.PlaybackTimeRule = function () {
                 request;
 
             time = hasSeekTarget ? st : ((useRejected ? (rejected.startTime) : currentTime));
+            if (hasSeekTarget) time = Math.max(time - track.fragmentDuration * 2, 0);
 
             if (rejected) {
                 sc.getFragmentModel().removeRejectedRequest(rejected);
